@@ -32,11 +32,15 @@ pub async fn run() {
 
     let mut loaded = three_d_asset::io::load_async(&["assets/checkerboard.jpg"]).await.unwrap();
     let mut cpu_texture: CpuTexture = loaded.deserialize("checkerboard").unwrap();
-    // cpu_texture.wrap_s = Wrapping::Repeat;
-    // cpu_texture.wrap_t = Wrapping::Repeat;
+    let mipmap = Some(Mipmap { max_ratio: 1, max_levels: 8, filter: Interpolation::Nearest, });
+    cpu_texture.min_filter = Interpolation::Nearest;
+    cpu_texture.mag_filter = Interpolation::Nearest;
+    cpu_texture.wrap_s = Wrapping::Repeat;
+    cpu_texture.wrap_t = Wrapping::Repeat;
+    cpu_texture.mipmap = mipmap;
     cpu_texture.data.to_color();
     let cpu_material = CpuMaterial {
-        albedo: Srgba { r: 220, g: 220, b: 220, a: 200, },
+        albedo: Srgba { r: 220, g: 220, b: 255, a: 220, },
         albedo_texture: Some(cpu_texture),
         ..Default::default()
     };
@@ -45,10 +49,11 @@ pub async fn run() {
 
 
     let mut path_array= Vec::new();
-    for i in -100..100 {
+    let radius = 6.0;
+    for i in -80..80 {
         let mut path = Vec::new();
-        for j in -40..40 {
-            let z = ((i as f32 + j as f32) * 0.1).sin();
+        for j in -45..45 {
+            let z = ((i as f32 + j as f32) * 0.1).sin() + radius * (j as f32 * 0.08).cos();
             let s = 0.2;
             path.push(vec3(i as f32 * s, j as f32 * s, z));
         }
@@ -94,8 +99,8 @@ fn cpu_ribbon(path_array: &Vec<Vec<Vec3>>) -> CpuMesh {
     let mut uvs = Vec::new();
 
     // variables for uv mapping
-    let mut u_distance = vec![0.0; l];
-    let mut v_distance = vec![0.0; p];
+    let mut u_distances = vec![vec![0.0; l]; p]; // distance along the horizontal paths
+    let mut v_distances = vec![vec![0.0; p]; l]; // distance along the vertical paths
     let mut u_total_distance = 0.0;
     let mut v_total_distance = 0.0;
 
@@ -106,23 +111,28 @@ fn cpu_ribbon(path_array: &Vec<Vec<Vec3>>) -> CpuMesh {
             positions.push(v3);
             if j > 0 {
                 u_total_distance += (path_array[i][j] - path_array[i][j - 1]).magnitude();
-                u_distance[j] = u_total_distance;
-            }
-            if i > 0 {
-                v_total_distance += (path_array[i][j] - path_array[i - 1][j]).magnitude();
-                v_distance[i] = v_total_distance;
+                u_distances[i][j] = u_total_distance;
             }
         }
     }
 
     // uvs
+
+    // compute vertical distances
+    for j in 0..l {
+        for i in 0..p {
+            if i > 0 {
+                v_total_distance += (path_array[i][j] - path_array[i - 1][j]).magnitude();
+                v_distances[j][i] = v_total_distance;
+            }
+        }
+    }
     for i in 0..p {
         for j in 0..l {
-            uvs.push(vec2(
-                u_distance[j] / u_total_distance,
-                v_distance[i] / v_total_distance,
 
-            ));
+            let u = u_distances[i][j] / u_total_distance;
+            let v = v_distances[j][i] / v_total_distance;
+            uvs.push(vec2(u,v));
         }
     }
      
