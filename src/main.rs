@@ -30,8 +30,8 @@ pub async fn run() {
     let light1 = DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(0.0, 0.5, 0.5));
 
 
-    let mut loaded = three_d_asset::io::load_async(&["assets/checkerboard.jpg"]).await.unwrap();
-    let mut cpu_texture: CpuTexture = loaded.deserialize("checkerboard").unwrap();
+    let mut loaded = three_d_asset::io::load_async(&["assets/spriteAtlas.png"]).await.unwrap();
+    let mut cpu_texture: CpuTexture = loaded.deserialize("spriteAtlas").unwrap();
     let mipmap = Some(Mipmap { max_ratio: 1, max_levels: 8, filter: Interpolation::Nearest, });
     cpu_texture.min_filter = Interpolation::Nearest;
     cpu_texture.mag_filter = Interpolation::Nearest;
@@ -131,7 +131,7 @@ fn cpu_ribbon(path_array: &Vec<Vec<Vec3>>) -> CpuMesh {
         for j in 0..l {
 
             let u = u_distances[i][j] / u_total_distance;
-            let v = v_distances[j][i] / v_total_distance;
+            let v = 1.0 - v_distances[j][i] / v_total_distance;
             uvs.push(vec2(u,v));
         }
     }
