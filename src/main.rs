@@ -5,6 +5,7 @@ async fn main() {
     run().await;
 }
 
+
 use three_d::*;
 
 pub async fn run() {
@@ -63,7 +64,7 @@ pub async fn run() {
     let ribbon = cpu_ribbon(&path_array);
 
     // Mesh
-    let mesh = Gm::new(
+    let mut  mesh = Gm::new(
         Mesh::new(&context, &ribbon),
         material,
     );
@@ -71,6 +72,9 @@ pub async fn run() {
     window.render_loop(move |mut frame_input| {
         camera.set_viewport(frame_input.viewport);
         control.handle_events(&mut camera, &mut frame_input.events);
+        let t = frame_input.accumulated_time as f32;
+        update_array_path(&mut path_array, t);
+        morph_ribbon(&mut mesh.geometry, &mut &path_array);
 
         frame_input
             .screen()
@@ -163,4 +167,25 @@ fn cpu_ribbon(path_array: &Vec<Vec<Vec3>>) -> CpuMesh {
     cpu_mesh.compute_normals();
     cpu_mesh.compute_tangents();
     cpu_mesh
+}
+
+
+fn morph_ribbon(mesh: &mut Mesh, path_array: &mut &Vec<Vec<Vec3>>) {
+    let mut positions = Vec::new();
+    for i in 0..path_array.len() {
+        for j in 0..path_array[i].len() {
+            let v3 = path_array[i][j].clone();
+            positions.push(v3);
+        }
+    }
+    let vb_pos = mesh.positions_mut();
+    vb_pos.fill(&positions);
+}
+
+fn update_array_path(path_array: &mut Vec<Vec<Vec3>>, t: f32) {
+    for i in 0..path_array.len() {
+        for j in 0..path_array[i].len() {
+            path_array[i][j].z = path_array[i][j].x * ((i + j) as f32 * 0.1).sin() * (t * 0.01).cos() * 0.3;
+        }
+    }
 }
