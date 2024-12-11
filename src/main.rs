@@ -8,6 +8,7 @@ async fn main() {
 
 use three_d::*;
 
+
 pub async fn run() {
     let window = Window::new(WindowSettings {
         title: "Shapes!".to_string(),
@@ -49,7 +50,7 @@ pub async fn run() {
 
 
 
-    let mut path_array= Vec::new();
+    let mut paths= Vec::new();
     let radius = 6.0;
     for i in -80..80 {
         let mut path = Vec::new();
@@ -58,14 +59,14 @@ pub async fn run() {
             let s = 0.2;
             path.push(vec3(i as f32 * s, j as f32 * s, z));
         }
-        path_array.push(path);
+        paths.push(path);
     }
 
-    let ribbon = cpu_ribbon(&path_array);
+    let cpu_mesh: CpuMesh = CpuMesh::ribbon(&paths);
 
     // Mesh
     let mut  mesh = Gm::new(
-        Mesh::new(&context, &ribbon),
+        Mesh::new(&context, &cpu_mesh),
         material,
     );
 
@@ -73,8 +74,8 @@ pub async fn run() {
         camera.set_viewport(frame_input.viewport);
         control.handle_events(&mut camera, &mut frame_input.events);
         let t = frame_input.accumulated_time as f32;
-        update_array_path(&mut path_array, t);
-        morph_ribbon(&mut mesh.geometry, &mut &path_array);
+        update_paths(&mut paths, t);
+        morph_ribbon(&mut mesh.geometry, &mut &paths);
 
         frame_input
             .screen()
@@ -92,89 +93,11 @@ pub async fn run() {
 
 
 
-fn cpu_ribbon(path_array: &Vec<Vec<Vec3>>) -> CpuMesh {
-    // path lengths
-    let p = path_array.len();
-    let l = path_array[0].len();
-
-    // vertex data arrays
+fn morph_ribbon(mesh: &mut Mesh, paths: &mut &Vec<Vec<Vec3>>) {
     let mut positions = Vec::new();
-    let mut indices: Vec<u32> = Vec::new();
-    let mut uvs = Vec::new();
-
-    // variables for uv mapping
-    let mut u_distances = vec![vec![0.0; l]; p]; // distance along the horizontal paths
-    let mut v_distances = vec![vec![0.0; p]; l]; // distance along the vertical paths
-    let mut u_total_distance = 0.0;
-    let mut v_total_distance = 0.0;
-
-    // positions
-    for i in 0..p {
-        for j in 0..l {
-            let v3 = path_array[i][j].clone();
-            positions.push(v3);
-            if j > 0 {
-                u_total_distance += (path_array[i][j] - path_array[i][j - 1]).magnitude();
-                u_distances[i][j] = u_total_distance;
-            }
-        }
-    }
-
-    // uvs
-
-    // compute vertical distances
-    for j in 0..l {
-        for i in 0..p {
-            if i > 0 {
-                v_total_distance += (path_array[i][j] - path_array[i - 1][j]).magnitude();
-                v_distances[j][i] = v_total_distance;
-            }
-        }
-    }
-    for i in 0..p {
-        for j in 0..l {
-
-            let u = u_distances[i][j] / u_total_distance;
-            let v = 1.0 - v_distances[j][i] / v_total_distance;
-            uvs.push(vec2(u,v));
-        }
-    }
-     
-    // indices
-    for i in 0..p - 1 {
-        for j in 0..l - 1 {
-            let i0 = i * l + j;
-            let i1 = i * l + j + 1;
-            let j0 = (i + 1) * l + j;
-            let j1 = (i + 1) * l + j + 1;
-
-            indices.push(i0 as u32);
-            indices.push(i1 as u32);
-            indices.push(j1 as u32);
-
-            indices.push(j1 as u32);
-            indices.push(j0 as u32);
-            indices.push(i0 as u32);
-        }
-    }
-
-    let mut cpu_mesh = CpuMesh {
-        positions: Positions::F32(positions),
-        indices: Indices::U32(indices),
-        uvs: Some(uvs),
-        ..Default::default()
-    };
-    cpu_mesh.compute_normals();
-    cpu_mesh.compute_tangents();
-    cpu_mesh
-}
-
-
-fn morph_ribbon(mesh: &mut Mesh, path_array: &mut &Vec<Vec<Vec3>>) {
-    let mut positions = Vec::new();
-    for i in 0..path_array.len() {
-        for j in 0..path_array[i].len() {
-            let v3 = path_array[i][j].clone();
+    for i in 0..paths.len() {
+        for j in 0..paths[i].len() {
+            let v3 = paths[i][j].clone();
             positions.push(v3);
         }
     }
@@ -182,10 +105,10 @@ fn morph_ribbon(mesh: &mut Mesh, path_array: &mut &Vec<Vec<Vec3>>) {
     vb_pos.fill(&positions);
 }
 
-fn update_array_path(path_array: &mut Vec<Vec<Vec3>>, t: f32) {
-    for i in 0..path_array.len() {
-        for j in 0..path_array[i].len() {
-            path_array[i][j].z = path_array[i][j].x * ((i + j) as f32 * 0.1).sin() * (t * 0.01).cos() * 0.3;
+fn update_paths(paths: &mut Vec<Vec<Vec3>>, t: f32) {
+    for i in 0..paths.len() {
+        for j in 0..paths[i].len() {
+            paths[i][j].z = paths[i][j].x * ((i + j) as f32 * 0.1).sin() * (t * 0.01).cos() * 0.3;
         }
     }
 }

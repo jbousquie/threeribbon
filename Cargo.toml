@@ -3,9 +3,19 @@ name = "threeribbon"
 version = "0.1.0"
 edition = "2021"
 
+[replace]
+"three-d-asset:0.9.0" = {path = "/home/jerome/scripts/rust/three-d-asset"} 
+
+[dev.dependencies]
+three-d = "0.18.0"
+three-d-asset = { version="0.9.0", features = ["png", "jpeg", "http"] }
+ 
 [dependencies]
-three-d = "0.18.0"  
-three-d-asset = {version = "0.9",features = ["png", "jpeg", "http"] }
+three-d = "0.18.0"
+three-d-asset = { version="0.9.0", features = ["png", "jpeg", "http"] }
+
+
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
